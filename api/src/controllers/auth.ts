@@ -253,10 +253,17 @@ router.get(
 			accountability: accountability,
 			schema: req.schema,
 		});
+		const userService = new UsersService({ schema: req.schema });
 
-		const email = getEmailFromProfile(req.params.provider, req.session.grant.response?.profile);
+		const email = getEmailFromProfile(req.params.provider, req.session.grant.response?.profile)
+			+ (req.params.provider === 'osu' ? '@osu.ppy.sh' : '');
 
 		req.session?.destroy(() => {});
+
+		const accountExists = await userService.emailHasAccount(email);
+		if (!accountExists && req.params.provider === 'osu') {
+			await userService.create({ email, status: 'active' });
+		}
 
 		const { accessToken, refreshToken, expires } = await authenticationService.authenticate({
 			email,
